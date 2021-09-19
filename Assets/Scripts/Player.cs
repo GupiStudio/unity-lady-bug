@@ -33,12 +33,31 @@ public class Player : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        PlayerMoveKeyboard();
+        AnimatePlayer(PlayerMoveKeyboard());
     }
 
-    private void PlayerMoveKeyboard()
+    private PlayerState PlayerMoveKeyboard()
     {
         float movementX = Input.GetAxisRaw("Horizontal");
         transform.position += new Vector3(movementX, 0f, 0f) * moveForce * Time.deltaTime;
+        sr.flipX = movementX == 0 ? sr.flipX : (movementX < 0); // this line of code is not supposed to be here
+
+        if (movementX != 0)
+        {
+            return PlayerState.Walk;
+        }
+
+        return PlayerState.Idle;
+    }
+
+    private void AnimatePlayer(PlayerState playerState)
+    {
+        if (playerState == PlayerState.Walk)
+        {
+            animator.SetBool(WalkAnimation, true);
+            return;
+        }
+
+        animator.SetBool(WalkAnimation, false);
     }
 }
