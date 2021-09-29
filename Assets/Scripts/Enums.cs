@@ -5,3 +5,9 @@ public enum PlayerState
     Jump,
     Grounded
 };
+
+public enum Result
+{
+    Failed,
+    Success
+}
