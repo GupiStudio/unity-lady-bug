@@ -7,31 +7,31 @@ using UnityEngine;
 
 namespace Wekonu.CartoonPhysics
 {
-	class Collision
+	public class Collision
 	{
-        private float _minMoveDistance;
+        public event EventHandler HitGround;
 
-        private float _minGroundNormalY;
+        private World _world;
 
-        public Collision(float minMoveDistance, float minGroundNormalY)
+        private Body _body;
+
+        private ContactFilter2D _contactFilter;
+
+        public Collision(ref Body body, ref World world, ref ContactFilter2D contactFilter)
 		{
-            _minMoveDistance = minMoveDistance;
-            _minGroundNormalY = minGroundNormalY;
+            _body = body;
+            _world = world;
+            _contactFilter = contactFilter;
 		}
 
-        public bool IsHit(List<RaycastHit2D> raycastHits) // independent
+        private bool IsHit(List<RaycastHit2D> raycastHits)
         {
             return raycastHits != null || raycastHits.Count > 0;
         }
 
-        public bool IsMoving(Vector2 move) // independent
+        private bool IsHitGround(RaycastHit2D hit)
         {
-            return move.magnitude > _minMoveDistance;
-        }
-
-        public bool IsHitGround(RaycastHit2D hit) // independent
-        {
-            if (hit.normal.y > _minGroundNormalY)
+            if (hit.normal.y > _world.MinGroundNormalY)
             {
                 return true;
             }
@@ -39,18 +39,13 @@ namespace Wekonu.CartoonPhysics
             return false;
         }
 
-        public void DetectGround(ref bool grounded, RaycastHit2D hit) // somehow independent
+        private List<RaycastHit2D> GetOverlapRaycast()
         {
-            grounded = IsHitGround(hit);
-        }
-
-        public List<RaycastHit2D> GetOverlapRaycast(Vector2 move, Rigidbody2D rb2d, ContactFilter2D contactFilter, float shellRadius) // independent
-        {
-            if (IsMoving(move))
+            if (_body.IsMoving())
             {
                 var hitBuffer = new RaycastHit2D[16];
 
-                int hitCount = rb2d.Cast(move, contactFilter, hitBuffer, move.magnitude + shellRadius);
+                int hitCount = _body.GetRigidBody().Cast(_body.Movement, _contactFilter, hitBuffer, _body.Movement.magnitude + _body.ShellRadius);
 
                 var raycastHits = new List<RaycastHit2D>();
 
@@ -65,15 +60,86 @@ namespace Wekonu.CartoonPhysics
             return null;
         }
 
-        public float CalculateDistance(Vector2 move, RaycastHit2D hit, float shellRadius) // independent
+        private float CalculateDistance(RaycastHit2D hit)
         {
-            float distance = move.magnitude;
+            float distance = _body.Movement.magnitude;
 
-            float modifiedDistance = hit.distance - shellRadius;
+            float modifiedDistance = hit.distance - _body.ShellRadius;
 
             distance = modifiedDistance < distance ? modifiedDistance : distance;
 
             return distance;
+        }
+
+        private void DetectGround(RaycastHit2D hit)
+        {
+            _body.Grounded = IsHitGround(hit);
+            if (IsHitGround(hit))
+			{
+                OnHitGround(EventArgs.Empty);
+                _body.Grounded = true;
+            }
+        }
+
+        private void Projection(ref Body body, Vector2 normal)
+        {
+            float projection = Vector2.Dot(body.Velocity, normal);
+
+            if (projection < 0)
+            {
+                body.Velocity = body.Velocity - (projection * normal);
+            }
+        }
+
+        public void DetectCollisionX()
+        {
+            List<RaycastHit2D> raycastHits = GetOverlapRaycast();
+
+            float distance = _body.Movement.magnitude;
+
+            if (_body.IsMoving() && IsHit(raycastHits))
+            {
+                foreach (RaycastHit2D hit in raycastHits)
+                {
+                    DetectGround(hit);
+
+                    Projection(ref _body, hit.normal);
+
+                    distance = CalculateDistance(hit);
+                }
+            }
+
+            _body.Translastion = distance;
+        }
+
+        public void DetectCollisionY()
+        {
+            List<RaycastHit2D> raycastHits = GetOverlapRaycast();
+
+            float distance = _body.Movement.magnitude;
+
+            if (_body.IsMoving() && IsHit(raycastHits))
+            {
+                foreach (RaycastHit2D hit in raycastHits)
+                {
+                    DetectGround(hit);
+
+                    Vector2 currentNormal = new Vector2(0, hit.normal.y);
+
+                    _world.GroundNormal = hit.normal;
+
+                    Projection(ref _body, currentNormal);
+
+                    distance = CalculateDistance(hit);
+                }
+            }
+
+            _body.Translastion = distance;
+        }
+
+        protected virtual void OnHitGround(EventArgs e)
+        {
+            HitGround?.Invoke(this, e);
         }
     }
 }

@@ -4,73 +4,90 @@ using UnityEngine;
 
 public class Custom2DPlayerController : Custom2DPhysics
 {
-    [SerializeField] private float maxSpeed = 7;
-    [SerializeField] private float jumpTakeOffSpeed = 7;
+    [SerializeField] private float _maxSpeed = 7;
+    [SerializeField] private float _jumpTakeOffSpeed = 7;
     
-    [SerializeField] private AudioSource audioSource;
-    [SerializeField] private AudioClip[] stepSounds;
-    [SerializeField] private AudioClip[] jumpSounds;
+    [SerializeField] private AudioSource _audioSource;
+    [SerializeField] private AudioClip[] _stepSounds;
+    [SerializeField] private AudioClip[] _jumpSounds;
 
-    private SpriteRenderer spriteRenderer;
-    private Animator animator;
+    private SpriteRenderer _spriteRenderer;
+    private Animator _animator;
 
     void Awake() 
     {
-        spriteRenderer = GetComponent<SpriteRenderer>();    
-        animator = GetComponent<Animator>();
+        _spriteRenderer = GetComponent<SpriteRenderer>();    
+        _animator = GetComponent<Animator>();
     }
 
-    protected override void ComputeVelocity()
+    protected override void ModifyVelocity()
     {
-        Vector2 move = Vector2.zero;
+        Vector2 movement = HandleMovement();
 
-        move.x = Input.GetAxis ("Horizontal");
+        DriveAnimation(ref _animator, Body.Grounded, Body.Velocity.x, Body.Velocity.y);
 
-        if (Input.GetButtonDown ("Jump") && Grounded) 
+        FlipSprite(ref _spriteRenderer, movement.x);
+
+        Force.Strength = movement * _maxSpeed;
+    }
+
+    private Vector2 HandleMovement()
+	{
+        Vector2 xMovement = Vector2.zero;
+
+        xMovement.x = Input.GetAxis("Horizontal");
+
+        if (Input.GetButtonDown("Jump") && Body.Grounded)
         {
-            Velocity.y = jumpTakeOffSpeed;
-        } 
-        else if (Input.GetButtonUp ("Jump")) 
+            Body.Velocity = new Vector2(Body.Velocity.x, _jumpTakeOffSpeed);
+        }
+        else if (Input.GetButtonUp("Jump"))
         {
-            if (Velocity.y > 0) 
+            if (Body.Velocity.y > 0)
             {
-                Velocity.y = Velocity.y * 0.5f;
+                Body.Velocity = new Vector2(Body.Velocity.x, (Body.Velocity.y * 0.5f));
             }
         }
 
-        if (animator)
-		{
-            animator.SetBool("grounded", Grounded);
-            animator.SetFloat("velocityX", Mathf.Abs(Velocity.x) / maxSpeed);
-            animator.SetFloat("velocityY", Mathf.Abs(Velocity.y) / jumpTakeOffSpeed);
-        }
+        return xMovement;
+    }
 
-        if (spriteRenderer)
-		{
-            bool flipSprite = spriteRenderer.flipX ? (move.x > 0.01f) : (move.x < 0f);
+    private void FlipSprite(ref SpriteRenderer spriteRenderer, float direction)
+	{
+        if (_spriteRenderer)
+        {
+            bool flipSprite = _spriteRenderer.flipX ? (direction > 0.01f) : (direction < 0f);
 
             if (flipSprite)
             {
-                spriteRenderer.flipX = !spriteRenderer.flipX;
+                _spriteRenderer.flipX = !_spriteRenderer.flipX;
             }
         }
+    }
 
-        TargetVelocity = move * maxSpeed;
+    private void DriveAnimation(ref Animator animator, bool grounded, float x, float y)
+	{
+        if (animator)
+        {
+            animator.SetBool("grounded", grounded);
+            animator.SetFloat("velocityX", Mathf.Abs(x) / _maxSpeed);
+            animator.SetFloat("velocityY", Mathf.Abs(y) / _jumpTakeOffSpeed);
+        }
     }
 
     private void PlayFootstepSound()
 	{
-        if (audioSource)
+        if (_audioSource)
 		{
-            audioSource.PlayOneShot(stepSounds[Random.Range(0, stepSounds.Length)]);
+            _audioSource.PlayOneShot(_stepSounds[Random.Range(0, _stepSounds.Length)]);
 		}
 	}
 
     private void PlayJumpSound()
 	{
-        if (audioSource)
+        if (_audioSource)
 		{
-            audioSource.PlayOneShot(jumpSounds[Random.Range(0, jumpSounds.Length)]);
+            _audioSource.PlayOneShot(_jumpSounds[Random.Range(0, _jumpSounds.Length)]);
 		}
 	}
 }

@@ -38,13 +38,35 @@ namespace Wekonu.CartoonPhysics
 			return _gravity;
 		}
 
-		public Vector2 GetNewPosition(Vector2 velocity) // independent
+		public Vector2 GetNewPosition(Vector2 velocity)
 		{
 			Vector2 deltaPosition = velocity * Time.deltaTime;
 
 			Vector2 move = Vector2.up * deltaPosition.y;
 
 			return move;
+		}
+
+		public void Affect(ref Body body, ref Collision collision)
+		{
+			body.Grounded = false;
+
+			ProjectMovement(ref body);
+
+			collision.DetectCollisionY();
+
+			body.Move();
+		}
+
+		public void ProjectMovement(ref Body body)
+		{
+			body.Velocity += _strength * Physics2D.gravity * Time.deltaTime;
+
+			Vector2 deltaPosition = body.Velocity * Time.deltaTime;
+
+			Vector2 move = Vector2.up * deltaPosition.y;
+
+			body.Movement = move;
 		}
 	}
 }

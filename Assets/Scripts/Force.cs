@@ -7,18 +7,22 @@ using UnityEngine;
 
 namespace Wekonu.CartoonPhysics
 {
-	class Force
+	public class Force
 	{
 		private static Force _force;
 
-		private float _strength;
+		private Vector2 _strength;
 
-		private Force()
+		private World _world;
+
+		private Force(ref World world)
 		{
-			//
+			_strength = Vector2.zero;
+
+			_world = world;
 		}
 
-		public float Strength
+		public Vector2 Strength
 		{
 			get => _strength;
 			set
@@ -27,26 +31,41 @@ namespace Wekonu.CartoonPhysics
 			}
 		}
 
-		public static Force GetInstance()
+		public static Force GetInstance(ref World world)
 		{
 			if (_force == null)
 			{
-				_force = new Force();
+				_force = new Force(ref world);
 				return _force;
 			}
 
 			return _force;
 		}
 
-		public Vector2 GetNewPosition(Vector2 velocity, Vector2 groundNormal) // independent
+		public void Affect(ref Body body, ref Collision collision, ref World world)
 		{
-			Vector2 deltaPosition = velocity * Time.deltaTime;
+			ProjectMovement(ref body, ref world);
 
-			Vector2 moveAlongGround = new Vector2(groundNormal.y, -groundNormal.x);
+			collision.DetectCollisionX();
+
+			body.Move();
+		}
+
+		private void ProjectMovement(ref Body body, ref World world)
+		{
+			Vector2 temp = body.Velocity;
+
+			temp.x = _strength.x;
+
+			body.Velocity = temp;
+
+			Vector2 deltaPosition = body.Velocity * Time.deltaTime;
+
+			Vector2 moveAlongGround = new Vector2(world.GroundNormal.y, -world.GroundNormal.x);
 
 			Vector2 move = moveAlongGround * deltaPosition.x;
 
-			return move;
+			body.Movement = move;
 		}
 	}
 }
