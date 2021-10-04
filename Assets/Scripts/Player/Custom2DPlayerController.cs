@@ -8,8 +8,7 @@ public enum PlayerState
     Crouch,
     Run,
     Jump,
-    DoubleJump,
-    TripleJump
+    MultipleJump
 };
 
 public class Custom2DPlayerController : Custom2DPhysics
@@ -17,6 +16,8 @@ public class Custom2DPlayerController : Custom2DPhysics
     [Header("Movement Setting")]
     [SerializeField] [Range(1, 50)] private float _maxRunSpeed = 7;
     [SerializeField] [Range(1, 50)] private float _jumpForce = 7;
+    [SerializeField] [Range(1, 5)] private byte _jumps = 1;
+    private byte _jumpsUsed;
 
     [Header("SFX Setting")]
     [SerializeField] private AudioSource _audioSource;
@@ -39,9 +40,9 @@ public class Custom2DPlayerController : Custom2DPhysics
         HandleHorizontalMovement();
         HandleVerticalMovement();
 
-        //DebugState();
+		//DebugState();
 
-        DriveAnimation(ref _animator, Body.Grounded, Body.Velocity.x, Body.Velocity.y);
+		DriveAnimation(ref _animator, Body.Grounded, Body.Velocity.x, Body.Velocity.y);
     }
 
     private void HandleHorizontalMovement()
@@ -69,7 +70,16 @@ public class Custom2DPlayerController : Custom2DPhysics
         if (Input.GetButtonDown("Jump") && Body.Grounded)
         {
             Body.Velocity = new Vector2(Body.Velocity.x, _jumpForce);
+            
+            _jumpsUsed = 1;
+            
             _playerState = PlayerState.Jump;
+        }
+        else if (Input.GetButtonDown("Jump") && !Body.Grounded && _jumpsUsed < _jumps) // implements multijumps
+        {
+            Body.Velocity = new Vector2(Body.Velocity.x, _jumpForce);
+            
+            _jumpsUsed++;
         }
         else if (Input.GetButtonUp("Jump"))
         {
@@ -78,6 +88,11 @@ public class Custom2DPlayerController : Custom2DPhysics
                 Body.Velocity = new Vector2(Body.Velocity.x, (Body.Velocity.y * 0.5f));
             }
         }
+
+        if (_jumpsUsed > 1)
+		{
+            _playerState = PlayerState.MultipleJump;
+		}
     }
 
 	private void DebugState()
@@ -96,11 +111,8 @@ public class Custom2DPlayerController : Custom2DPhysics
             case PlayerState.Jump:
                 Debug.Log("state: JUMP");
                 break;
-            case PlayerState.DoubleJump:
-                Debug.Log("state: DOUBLE_JUMP");
-                break;
-            case PlayerState.TripleJump:
-                Debug.Log("state: TRIPLE_JUMP");
+            case PlayerState.MultipleJump:
+                Debug.Log("state: MULTIPLE_JUMP");
                 break;
             default:
                 Debug.Log("state: UNKNOWN");
