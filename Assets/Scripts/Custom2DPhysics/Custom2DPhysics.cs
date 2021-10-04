@@ -5,7 +5,9 @@ using Wekonu.CartoonPhysics;
 
 public class Custom2DPhysics : MonoBehaviour
 {
+    [Header("Physics Setting")]
     [SerializeField]
+    [Range(1, 10)]
     private float _gravityStrength = 1f;
     
     protected Body Body;

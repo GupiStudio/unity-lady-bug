@@ -2,17 +2,31 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
+public enum PlayerState
+{
+    Idle,
+    Crouch,
+    Run,
+    Jump,
+    DoubleJump,
+    TripleJump
+};
+
 public class Custom2DPlayerController : Custom2DPhysics
 {
-    [SerializeField] private float _maxSpeed = 7;
-    [SerializeField] private float _jumpTakeOffSpeed = 7;
-    
+    [Header("Movement Setting")]
+    [SerializeField] [Range(1, 50)] private float _maxRunSpeed = 7;
+    [SerializeField] [Range(1, 50)] private float _jumpForce = 7;
+
+    [Header("SFX Setting")]
     [SerializeField] private AudioSource _audioSource;
     [SerializeField] private AudioClip[] _stepSounds;
     [SerializeField] private AudioClip[] _jumpSounds;
 
     private SpriteRenderer _spriteRenderer;
     private Animator _animator;
+
+    private PlayerState _playerState = PlayerState.Idle;
 
     void Awake() 
     {
@@ -22,24 +36,40 @@ public class Custom2DPlayerController : Custom2DPhysics
 
     protected override void ModifyVelocity()
     {
-        Vector2 movement = HandleMovement();
+        HandleHorizontalMovement();
+        HandleVerticalMovement();
+
+        //DebugState();
 
         DriveAnimation(ref _animator, Body.Grounded, Body.Velocity.x, Body.Velocity.y);
+    }
+
+    private void HandleHorizontalMovement()
+	{
+        Vector2 movement = Vector2.zero;
+
+        movement.x = Input.GetAxis("Horizontal");
 
         FlipSprite(ref _spriteRenderer, movement.x);
 
-        Force.Strength = movement * _maxSpeed;
+        Force.Strength = movement * _maxRunSpeed;
+
+        if (Body.Grounded && Mathf.Abs(movement.x) <= 0.01f)
+        {
+            _playerState = PlayerState.Idle;
+        }
+        else if (Body.Grounded && Mathf.Abs(movement.x) > 0.01f)
+		{
+            _playerState = PlayerState.Run;
+		}
     }
 
-    private Vector2 HandleMovement()
+    private void HandleVerticalMovement()
 	{
-        Vector2 xMovement = Vector2.zero;
-
-        xMovement.x = Input.GetAxis("Horizontal");
-
         if (Input.GetButtonDown("Jump") && Body.Grounded)
         {
-            Body.Velocity = new Vector2(Body.Velocity.x, _jumpTakeOffSpeed);
+            Body.Velocity = new Vector2(Body.Velocity.x, _jumpForce);
+            _playerState = PlayerState.Jump;
         }
         else if (Input.GetButtonUp("Jump"))
         {
@@ -48,9 +78,35 @@ public class Custom2DPlayerController : Custom2DPhysics
                 Body.Velocity = new Vector2(Body.Velocity.x, (Body.Velocity.y * 0.5f));
             }
         }
-
-        return xMovement;
     }
+
+	private void DebugState()
+	{
+        switch(_playerState)
+		{
+            case PlayerState.Idle:
+                Debug.Log("state: IDLE");
+                break;
+            case PlayerState.Crouch:
+                Debug.Log("state: CROUCH");
+                break;
+            case PlayerState.Run:
+                Debug.Log("state: RUN");
+                break;
+            case PlayerState.Jump:
+                Debug.Log("state: JUMP");
+                break;
+            case PlayerState.DoubleJump:
+                Debug.Log("state: DOUBLE_JUMP");
+                break;
+            case PlayerState.TripleJump:
+                Debug.Log("state: TRIPLE_JUMP");
+                break;
+            default:
+                Debug.Log("state: UNKNOWN");
+                break;
+        }
+	}
 
     private void FlipSprite(ref SpriteRenderer spriteRenderer, float direction)
 	{
@@ -70,8 +126,8 @@ public class Custom2DPlayerController : Custom2DPhysics
         if (animator)
         {
             animator.SetBool("grounded", grounded);
-            animator.SetFloat("velocityX", Mathf.Abs(x) / _maxSpeed);
-            animator.SetFloat("velocityY", Mathf.Abs(y) / _jumpTakeOffSpeed);
+            animator.SetFloat("velocityX", Mathf.Abs(x) / _maxRunSpeed);
+            animator.SetFloat("velocityY", Mathf.Abs(y) / _jumpForce);
         }
     }
 
